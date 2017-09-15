@@ -1,6 +1,6 @@
 # ECE 448: Introduction to Artificial Intelligence
 
-This repository is for the machine problems, or MPs, that are assigned in ECE 448 during the Fall 2017 semester at the University of Illinois. The contributers are Ben Li, Harsh Modhera, Mihir Sherlakar
+This repository is for the machine problems, or MPs, that are assigned in ECE 448 during the Fall 2017 semester at the University of Illinois. The contributers are Ben Li, Harsh Modhera, Mihir Sherlakar.
 
 The following are some important dates regarding the MPs.
 
