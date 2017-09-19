@@ -4,44 +4,20 @@
 import sys
 
 class Tile:
-    'Data structure object used to create a maze'  
+    '''Data structure object used to create a maze'''
     # Enumeration for what Tile objects contain
     BLANK, WALL, VISITED, GOAL = range(4)
     
     def __init__(self, tileDescription):
         self.value = tileDescription
 
-    # Check if it is possible to travel in a given direction
-    def canTravelUp(self):
-        if(maze[x][y-1].value == WALL):
-            return 0
-        else:
-            return 1
-        
-    def canTravelDown(self):
-        if(maze[x][y+1].value == WALL):
-            return 0
-        else:
-            return 1
-    
-    def canTravelLeft(self):
-        if(maze[x-1][y].value == WALL):
-            return 0
-        else:
-            return 1
-    
-    def canTravelRight(self):
-        if(maze[x+1][y].value == WALL):
-            return 0
-        else:
-            return 1
-
 class Maze:
-    'Parsing the maze from input text file to data structure'
-    def __init__(self, mazetext):
+    '''Parsing the maze from input text file to data structure'''
+    def __init__(self, mazefile):
         self.path_cost = self.nodes_expd = 0
+        self.current_x = self.current_y = None
     
-        with open(mazetext, 'r') as in_file:
+        with open(mazefile, 'r') as in_file:
             self.maze_width = len(in_file.readline().strip())
             self.maze_height = 1
     
@@ -63,7 +39,32 @@ class Maze:
                         self.current_x = column_idx
                         self.current_y = self.maze_height
                 self.maze_height += 1
-   
+
+    # Check if it is possible to travel in a given direction
+    def canTravelUp(self):
+        if(self.maze[self.current_x][self.current_y-1].value == Tile.WALL):
+            return 0
+        else:
+            return 1
+        
+    def canTravelDown(self):
+        if(self.maze[self.current_x][self.current_y+1].value == Tile.WALL):
+            return 0
+        else:
+            return 1
+    
+    def canTravelLeft(self):
+        if(self.maze[self.current_x-1][self.current_y].value == Tile.WALL):
+            return 0
+        else:
+            return 1
+    
+    def canTravelRight(self):
+        if(self.maze[self.current_x+1][self.current_y].value == Tile.WALL):
+            return 0
+        else:
+            return 1
+
     def printMaze(self, output_maze):
         '''Print ccmaze into output text file in original format'''
         with open(output_maze, 'w') as out_file:
