@@ -77,15 +77,15 @@ class Maze:
                         out_file.write('%c' % '.')
                 out_file.write('\n')
            
-def dfSearch():
+def dfSearch(searchMaze):
 
-def bfSearch():
+def bfSearch(searchMaze):
 
-def greedySearch():
+def greedySearch(searchMaze):
 
-def astarSearch():
-
-        
+def astarSearch(searchMaze):       
+    
+    
 def main():
     if len(sys.argv) != 4:
         print 'Usage:', sys.argv[0], '{1,2,3,4} input_maze.txt output_soln.txt'
