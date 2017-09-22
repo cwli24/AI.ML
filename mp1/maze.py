@@ -2,14 +2,20 @@
 """Search for the solution to mazes using DFS, BFS, greedy best-first, and A* algorithms."""
 
 import sys
+from collections import deque
 
 class Tile:
-    '''Data structure object used to create a maze'''
+    '''Data structure object used to create a maze. With this construct, we define:
+    "Path cost"         as  number of Tiles in the valid path, marked by value of PATH
+    "Nodes expanded"    as  total number of Tiles visited, marked by value of VISITED+PATH
+    '''
+
     # Enumeration for what Tile objects contain
-    BLANK, WALL, VISITED, GOAL = range(4)
+    BLANK, WALL, VISITED, GOAL, PATH = range(5)
     
     def __init__(self, tileDescription):
         self.value = tileDescription
+        self.parent = None;
 
 class Maze:
     '''Parsing the maze from input text file to data structure'''
@@ -42,50 +48,110 @@ class Maze:
 
     # Check if it is possible to travel in a given direction
     def canTravelUp(self):
-        if(self.maze[self.current_x][self.current_y-1].value == Tile.WALL):
-            return 0
-        else:
-            return 1
+        next_position = self.maze[self.current_x][self.current_y-1].value
+        return 0 if next_position == Tile.WALL or next_position == Tile.VISITED else 1
         
     def canTravelDown(self):
-        if(self.maze[self.current_x][self.current_y+1].value == Tile.WALL):
-            return 0
-        else:
-            return 1
+        next_position = self.maze[self.current_x][self.current_y+1].value
+        return 0 if next_position == Tile.WALL or next_position == Tile.VISITED else 1
     
     def canTravelLeft(self):
-        if(self.maze[self.current_x-1][self.current_y].value == Tile.WALL):
-            return 0
-        else:
-            return 1
+        next_position = self.maze[self.current_x-1][self.current_y].value
+        return 0 if next_position == Tile.WALL or next_position == Tile.VISITED else 1
     
     def canTravelRight(self):
-        if(self.maze[self.current_x+1][self.current_y].value == Tile.WALL):
-            return 0
-        else:
-            return 1
+        next_position = self.maze[self.current_x+1][self.current_y].value
+        return 0 if next_position == Tile.WALL or next_position == Tile.VISITED else 1
 
     def printMaze(self, output_maze):
         '''Print ccmaze into output text file in original format'''
         with open(output_maze, 'w') as out_file:
             for row in range(self.maze_height):
                 for col in range(self.maze_width):
-                    if(self.maze[col][row].value == Tile.WALL):
+                    if self.maze[col][row].value == Tile.WALL:
                         out_file.write('%c' % '%')
-                    elif(self.maze[col][row].value == Tile.BLANK):
+                    elif self.maze[col][row].value == Tile.BLANK or self.maze[col][row].value == Tile.VISITED:
                         out_file.write('%c' % ' ')
                     else:
                         out_file.write('%c' % '.')
                 out_file.write('\n')
            
 def dfSearch(searchMaze):
+    # we use a stack of coords to keep track of our valid path, starting with 'P'
+    stack = deque()
+    stack.append((searchMaze.current_x, searchMaze.current_y))
+    
+    while stack:
+        if searchMaze.canTravelLeft():
+            # change respective coordinate to "move"
+            searchMaze.current_x -= 1
 
+            # increment our number of nodes expanded counter
+            searchMaze.nodes_expd += 1
+
+            # push this new position onto the stack
+            stack.append((searchMaze.current_x, searchMaze.current_y))
+            current_pos = searchMaze.maze[searchMaze.current_x][searchMaze.current_y]
+            
+            # stop if we reached the 'E'nd, prevent future visit if we didn't
+            if current_pos.value == Tile.GOAL: break
+            else: current_pos.value = Tile.VISITED
+            
+        elif searchMaze.canTravelUp():
+            searchMaze.current_y -= 1
+            searchMaze.nodes_expd += 1
+            
+            stack.append((searchMaze.current_x, searchMaze.current_y))
+            current_pos = searchMaze.maze[searchMaze.current_x][searchMaze.current_y]
+            
+            if current_pos.value == Tile.GOAL: break
+            else: current_pos.value = Tile.VISITED
+            
+        elif searchMaze.canTravelRight():
+            searchMaze.current_x += 1
+            searchMaze.nodes_expd += 1
+            
+            stack.append((searchMaze.current_x, searchMaze.current_y))
+            current_pos = searchMaze.maze[searchMaze.current_x][searchMaze.current_y]
+            
+            if current_pos.value == Tile.GOAL: break
+            else: current_pos.value = Tile.VISITED
+            
+        elif searchMaze.canTravelDown():
+            searchMaze.current_y += 1
+            searchMaze.nodes_expd += 1
+            
+            stack.append((searchMaze.current_x, searchMaze.current_y))
+            current_pos = searchMaze.maze[searchMaze.current_x][searchMaze.current_y]
+            
+            if current_pos.value == Tile.GOAL: break
+            else: current_pos.value = Tile.VISITED
+        
+        else:
+            # we discard a bad step, and retrace to the previous position to try another path
+            stack.pop()
+            searchMaze.current_x, searchMaze.current_y = stack[-1]
+    
+    # our stack holds our valid Tiles path from 'P' to 'E', inclusively
+    for x, y in stack:
+        searchMaze.maze[x][y].value = Tile.PATH
+
+    # count the number of tiles in our solution path
+    searchMaze.path_cost = len(stack)
+        
+    # and we're done!
+    
 def bfSearch(searchMaze):
 
-def greedySearch(searchMaze):
+    # Deque object is used as a queue in this algorithm
 
-def astarSearch(searchMaze):       
+    return
     
+def greedySearch(searchMaze):
+    return
+    
+def astarSearch(searchMaze):   
+    return    
     
 def main():
     if len(sys.argv) != 4:
@@ -98,16 +164,17 @@ def main():
     
     # Instantiate the required mazes
     searchMaze = Maze(sys.argv[2])
-    
+    searchType = int(sys.argv[1])
+
     # Perform the required searches
-    if sys.argv[1] == 1:
-        searchAlgorithm = 'Depth-first'
+    if searchType == 1:
+        searchAlgorithm = 'Depth-First'
         dfSearch(searchMaze)
-    elif sys.argv[1] == 2:
-        searchAlgorithm = 'Breadth-first'
+    elif searchType == 2:
+        searchAlgorithm = 'Breadth-First'
         bfSearch(searchMaze)
-    elif sys.argv[1] == 3:
-        searchAlgorithm = 'Greedy best-first'
+    elif searchType == 3:
+        searchAlgorithm = 'Greedy Best-First'
         greedySearch(searchMaze)
     else:
         searchAlgorithm = 'A*'
