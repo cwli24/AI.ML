@@ -15,7 +15,7 @@ class Tile:
     
     def __init__(self, tileDescription):
         self.value = tileDescription
-        self.parent = None;
+        self.parent = None
 
 class Maze:
     '''Parsing the maze from input text file to data structure'''
@@ -46,7 +46,7 @@ class Maze:
                         self.current_y = self.maze_height
                 self.maze_height += 1
 
-    # Check if it is possible to travel in a given direction
+    # Check if it is possible to travel in a given direction; we go in L,U,R,D order
     def canTravelUp(self):
         next_position = self.maze[self.current_x][self.current_y-1].value
         return 0 if next_position == Tile.WALL or next_position == Tile.VISITED else 1
@@ -80,6 +80,8 @@ def dfSearch(searchMaze):
     # we use a stack of coords to keep track of our valid path, starting with 'P'
     stack = deque()
     stack.append((searchMaze.current_x, searchMaze.current_y))
+    searchMaze.nodes_expd = 1
+    # the start Tile is already marked as VISITED when maze was constructed
     
     while stack:
         if searchMaze.canTravelLeft():
@@ -93,7 +95,7 @@ def dfSearch(searchMaze):
             stack.append((searchMaze.current_x, searchMaze.current_y))
             current_pos = searchMaze.maze[searchMaze.current_x][searchMaze.current_y]
             
-            # stop if we reached the 'E'nd, prevent future visit if we didn't
+            # stop if we reached the '.' (end), prevent future visit if we didn't
             if current_pos.value == Tile.GOAL: break
             else: current_pos.value = Tile.VISITED
             
@@ -132,7 +134,7 @@ def dfSearch(searchMaze):
             stack.pop()
             searchMaze.current_x, searchMaze.current_y = stack[-1]
     
-    # our stack holds our valid Tiles path from 'P' to 'E', inclusively
+    # our stack holds our valid Tiles path from 'P' to '.', inclusively
     for x, y in stack:
         searchMaze.maze[x][y].value = Tile.PATH
 
@@ -142,11 +144,81 @@ def dfSearch(searchMaze):
     # and we're done!
     
 def bfSearch(searchMaze):
-
-    # Deque object is used as a queue in this algorithm
-
-    return
+    # we use a queue of coords to keep track of our visited nodes, starting with 'P'
+    queue = deque()
+    queue.append((searchMaze.current_x, searchMaze.current_y))
     
+    while queue:
+        # we expand the next Tile node on the queue...
+        searchMaze.current_x, searchMaze.current_y = queue.pop()
+        searchMaze.nodes_expd += 1
+        
+        # and add each valid step from current position onto it
+        if searchMaze.canTravelLeft(): 
+            queue.append((searchMaze.current_x-1, searchMaze.current_y))
+            addTile = searchMaze.maze[searchMaze.current_x-1][searchMaze.current_y]
+            
+            # we link the expansions to track possible paths...
+            addTile.parent = (searchMaze.current_x, searchMaze.current_y)
+            
+            # and set this Tile as the next node, if it is the end point
+            if addTile.value == Tile.GOAL:
+                searchMaze.current_x -= 1
+                searchMaze.nodes_expd += 1
+                break
+            # or mark it to reduce duplication on queue, if it's a blank space
+            else:
+                addTile.value = Tile.VISITED
+            
+        if searchMaze.canTravelUp(): 
+            queue.append((searchMaze.current_x, searchMaze.current_y-1))
+            addTile = searchMaze.maze[searchMaze.current_x][searchMaze.current_y-1]
+           
+            addTile.parent = (searchMaze.current_x, searchMaze.current_y)
+            if addTile.value == Tile.GOAL:
+                searchMaze.current_y -= 1
+                searchMaze.nodes_expd += 1
+                break
+            else:
+                addTile.value = Tile.VISITED
+            
+        if searchMaze.canTravelRight(): 
+            queue.append((searchMaze.current_x+1, searchMaze.current_y))
+            addTile = searchMaze.maze[searchMaze.current_x+1][searchMaze.current_y]
+            
+            addTile.parent = (searchMaze.current_x, searchMaze.current_y)
+            if addTile.value == Tile.GOAL:
+                searchMaze.current_x += 1
+                searchMaze.nodes_expd += 1
+                break
+            else:
+               addTile.value = Tile.VISITED
+       
+        if searchMaze.canTravelDown(): 
+            queue.append((searchMaze.current_x, searchMaze.current_y+1))
+            addTile = searchMaze.maze[searchMaze.current_x][searchMaze.current_y+1]
+            
+            addTile.parent = (searchMaze.current_x, searchMaze.current_y)
+            if addTile.value == Tile.GOAL:
+                searchMaze.current_y += 1
+                searchMaze.nodes_expd +=1
+                break
+            else:
+                addTile.value = Tile.VISITED
+    # addTile would be our "current position" tile, or rather, the end '.' tile upon break
+    
+    # backtrace from '.' to 'P', building our solution path
+    while addTile.parent != None:
+        searchMaze.path_cost += 1
+        addTile.value = Tile.PATH
+        addTile = searchMaze.maze[addTile.parent[0]][addTile.parent[1]]
+            
+    # the starting tile is not included in the loop above
+    searchMaze.path_cost += 1
+    addTile.value = Tile.PATH        
+            
+    # and we're done!
+   
 def greedySearch(searchMaze):
     return
     
