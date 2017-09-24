@@ -74,6 +74,8 @@ class Maze:
                         out_file.write('%c' % '%')
                     elif self.maze[col][row].value == Tile.BLANK or self.maze[col][row].value == Tile.VISITED:
                         out_file.write('%c' % ' ')
+                    elif (col, row) == self.endpt:
+                        out_file.write('%c' % 'E')
                     else:
                         out_file.write('%c' % '.')
                 out_file.write('\n')
@@ -280,7 +282,81 @@ def greedySearch(searchMaze):
     addTile.value = Tile.PATH     
     
 def astarSearch(searchMaze):   
-    return    
+    # we use a priority queue of (f(n)=total, g(n)=cost, coords) to prioritize shortest path to end goal
+    pqueue = PriorityQueue()
+    pqueue.put( (1, 0, (searchMaze.current_x, searchMaze.current_y)) )
+    
+    while not pqueue.empty():
+        # grab lowest total cost coordinate
+        total_cost, cost_so_far, (searchMaze.current_x, searchMaze.current_y) = pqueue.get()
+        searchMaze.nodes_expd += 1
+        
+        # if we can't travel any direction, this value gets thrown away, so dw (yay!)
+        cost_so_far += 1
+        
+        if searchMaze.canTravelLeft():
+            coord_pair = (searchMaze.current_x-1, searchMaze.current_y)
+            pqueue.put( (cost_so_far + manDist(coord_pair, searchMaze.endpt), cost_so_far, coord_pair) )
+            
+            # similar to BFS
+            addTile = searchMaze.maze[searchMaze.current_x-1][searchMaze.current_y]
+            addTile.parent = (searchMaze.current_x, searchMaze.current_y)
+            if addTile.value == Tile.GOAL:
+                searchMaze.current_x -= 1
+                searchMaze.nodes_expd += 1
+                break
+            else:
+                addTile.value = Tile.VISITED
+                
+        if searchMaze.canTravelUp():
+            coord_pair = (searchMaze.current_x, searchMaze.current_y-1)
+            pqueue.put( (cost_so_far + manDist(coord_pair, searchMaze.endpt), cost_so_far, coord_pair) )
+            
+            # create backward trace and prevent redundant queueing
+            addTile = searchMaze.maze[searchMaze.current_x][searchMaze.current_y-1]
+            addTile.parent = (searchMaze.current_x, searchMaze.current_y)
+            if addTile.value == Tile.GOAL:
+                searchMaze.current_y -= 1
+                searchMaze.nodes_expd += 1
+                break
+            else:
+                addTile.value = Tile.VISITED
+        
+        if searchMaze.canTravelRight():
+            coord_pair = (searchMaze.current_x+1, searchMaze.current_y)
+            pqueue.put( (cost_so_far + manDist(coord_pair, searchMaze.endpt), cost_so_far, coord_pair) )
+            
+            # create backward trace and prevent redundant queueing
+            addTile = searchMaze.maze[searchMaze.current_x+1][searchMaze.current_y]
+            addTile.parent = (searchMaze.current_x, searchMaze.current_y)
+            if addTile.value == Tile.GOAL:
+                searchMaze.current_x += 1
+                searchMaze.nodes_expd += 1
+                break
+            else:
+                addTile.value = Tile.VISITED
+    
+        if searchMaze.canTravelDown():
+            coord_pair = (searchMaze.current_x, searchMaze.current_y+1)
+            pqueue.put( (cost_so_far + manDist(coord_pair, searchMaze.endpt), cost_so_far, coord_pair) )
+            
+            # create backward trace and prevent redundant queueing
+            addTile = searchMaze.maze[searchMaze.current_x][searchMaze.current_y+1]
+            addTile.parent = (searchMaze.current_x, searchMaze.current_y)
+            if addTile.value == Tile.GOAL:
+                searchMaze.current_y += 1
+                searchMaze.nodes_expd += 1
+                break
+            else:
+                addTile.value = Tile.VISITED
+
+    # addTile would be our "current position" tile, or rather, the end '.' tile upon break
+    while addTile.parent != None:
+        searchMaze.path_cost += 1
+        addTile.value = Tile.PATH
+        addTile = searchMaze.maze[addTile.parent[0]][addTile.parent[1]]
+    searchMaze.path_cost += 1
+    addTile.value = Tile.PATH
     
 def main():
     if len(sys.argv) not in (3,4):
