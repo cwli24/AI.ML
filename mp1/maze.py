@@ -150,7 +150,7 @@ def bfSearch(searchMaze):
     
     while queue:
         # we expand the next Tile node on the queue...
-        searchMaze.current_x, searchMaze.current_y = queue.pop()
+        searchMaze.current_x, searchMaze.current_y = queue.popleft()
         searchMaze.nodes_expd += 1
         
         # and add each valid step from current position onto it
@@ -226,8 +226,8 @@ def astarSearch(searchMaze):
     return    
     
 def main():
-    if len(sys.argv) != 4:
-        print 'Usage:', sys.argv[0], '{1,2,3,4} input_maze.txt output_soln.txt'
+    if len(sys.argv) not in (3,4):
+        print 'Usage:', sys.argv[0], '{1,2,3,4} input_maze.txt [output_soln.txt]'
         print '        1 = Depth-first search'
         print '        2 = Breadth-first search'
         print '        3 = Greedy best-first search'
@@ -252,8 +252,9 @@ def main():
         searchAlgorithm = 'A*'
         astarSearch(searchMaze)
         
-    # Output the searched maze    
-    searchMaze.printMaze(sys.argv[3])
+    # Output the searched maze
+    if len(sys.argv) == 4:
+        searchMaze.printMaze(sys.argv[3])
     print 'Path cost of the solution:', searchMaze.path_cost, 'steps'
     print 'Number of nodes expanded by', searchAlgorithm, 'search algorithm:', searchMaze.nodes_expd
 
