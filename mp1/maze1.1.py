@@ -149,8 +149,8 @@ def dfSearch(searchMaze):
         searchMaze.maze[x][y].value = Tile.PATH
     searchMaze.maze[stack[0][0]][stack[0][1]].value = 'S'
 
-    # count the number of tiles in our solution path
-    searchMaze.path_cost = len(stack)
+    # count the number of tile steps in our solution path
+    searchMaze.path_cost = len(stack)-1
         
     # and we're done!
     
@@ -223,9 +223,8 @@ def bfSearch(searchMaze):
         searchMaze.path_cost += 1
         addTile.value = Tile.PATH
         addTile = searchMaze.maze[addTile.parent[0]][addTile.parent[1]]
-            
-    # the starting tile is not included in the loop above
-    searchMaze.path_cost += 1
+
+    # we are back to the starting tile
     addTile.value = 'S'        
             
     # and we're done!
@@ -281,7 +280,6 @@ def greedySearch(searchMaze):
         searchMaze.path_cost += 1
         addTile.value = Tile.PATH
         addTile = searchMaze.maze[addTile.parent[0]][addTile.parent[1]]
-    searchMaze.path_cost += 1
     addTile.value = 'S'     
     
 def astarSearch(searchMaze):   
@@ -355,11 +353,10 @@ def astarSearch(searchMaze):
 
     # addTile would be our "current position" tile, or rather, the end '.' tile upon break
     while addTile.parent != None:
-        searchMaze.path_cost += 1
         addTile.value = Tile.PATH
         addTile = searchMaze.maze[addTile.parent[0]][addTile.parent[1]]
-    searchMaze.path_cost += 1
     addTile.value = 'S'
+    searchMaze.path_cost = cost_so_far
     
 def main():
     if len(sys.argv) not in (3,4):
