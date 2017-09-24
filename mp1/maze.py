@@ -2,6 +2,7 @@
 """Search for the solution to mazes using DFS, BFS, greedy best-first, and A* algorithms."""
 
 import sys
+from Queue import PriorityQueue
 from collections import deque
 
 class Tile:
@@ -21,7 +22,7 @@ class Maze:
     '''Parsing the maze from input text file to data structure'''
     def __init__(self, mazefile):
         self.path_cost = self.nodes_expd = 0
-        self.current_x = self.current_y = None
+        self.current_x = self.current_y = self.endpt = None
     
         with open(mazefile, 'r') as in_file:
             self.maze_width = len(in_file.readline().strip())
@@ -40,6 +41,7 @@ class Maze:
                         self.maze[column_idx].append(Tile(Tile.WALL))
                     elif c == '.':
                         self.maze[column_idx].append(Tile(Tile.GOAL))
+                        self.endpt = (column_idx, self.maze_height)
                     else: #c == 'P'
                         self.maze[column_idx].append(Tile(Tile.VISITED))
                         self.current_x = column_idx
@@ -76,6 +78,10 @@ class Maze:
                         out_file.write('%c' % '.')
                 out_file.write('\n')
            
+def manDist((cur_x, cur_y), (goal_x, goal_y)):
+    '''Manhattan distance formula'''
+    return abs(cur_x - goal_x) + abs(cur_y - goal_y)
+                      
 def dfSearch(searchMaze):
     # we use a stack of coords to keep track of our valid path, starting with 'P'
     stack = deque()
@@ -220,7 +226,58 @@ def bfSearch(searchMaze):
     # and we're done!
    
 def greedySearch(searchMaze):
-    return
+    # we use a priority queue of (manDist, coords) to prioritize shortest path to end goal
+    pqueue = PriorityQueue()
+    pqueue.put( (1, (searchMaze.current_x, searchMaze.current_y)) )
+    
+    while not pqueue.empty():
+        # grab lowest distance coordinate
+        distance, (searchMaze.current_x, searchMaze.current_y) = pqueue.get()
+        searchMaze.nodes_expd += 1
+        
+        # we reached the end goal
+        if distance == 0: break
+        
+        if searchMaze.canTravelLeft():
+            coord_pair = (searchMaze.current_x-1, searchMaze.current_y)           
+            pqueue.put( (manDist(coord_pair, searchMaze.endpt), coord_pair) )
+            
+            # create backward trace and prevent redundant queueing
+            addTile = searchMaze.maze[searchMaze.current_x-1][searchMaze.current_y]
+            addTile.parent = (searchMaze.current_x, searchMaze.current_y)
+            addTile.value = Tile.VISITED
+        
+        if searchMaze.canTravelUp():
+            coord_pair = (searchMaze.current_x, searchMaze.current_y-1)
+            pqueue.put( (manDist(coord_pair, searchMaze.endpt), coord_pair) )
+        
+            addTile = searchMaze.maze[searchMaze.current_x][searchMaze.current_y-1]
+            addTile.parent = (searchMaze.current_x, searchMaze.current_y)
+            addTile.value = Tile.VISITED
+        
+        if searchMaze.canTravelRight():
+            coord_pair = (searchMaze.current_x+1, searchMaze.current_y)
+            pqueue.put( (manDist(coord_pair, searchMaze.endpt), coord_pair) )
+            
+            addTile = searchMaze.maze[searchMaze.current_x+1][searchMaze.current_y]
+            addTile.parent = (searchMaze.current_x, searchMaze.current_y)
+            addTile.value = Tile.VISITED
+        
+        if searchMaze.canTravelDown():
+            coord_pair = (searchMaze.current_x, searchMaze.current_y+1)
+            pqueue.put( (manDist(coord_pair, searchMaze.endpt), coord_pair) )
+            
+            addTile = searchMaze.maze[searchMaze.current_x][searchMaze.current_y+1]
+            addTile.parent = (searchMaze.current_x, searchMaze.current_y)
+            addTile.value = Tile.VISITED
+            
+    # addTile would be our "current position" tile, or rather, the end '.' tile upon break
+    while addTile.parent != None:
+        searchMaze.path_cost += 1
+        addTile.value = Tile.PATH
+        addTile = searchMaze.maze[addTile.parent[0]][addTile.parent[1]]
+    searchMaze.path_cost += 1
+    addTile.value = Tile.PATH     
     
 def astarSearch(searchMaze):   
     return    
