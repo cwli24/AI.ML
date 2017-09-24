@@ -67,6 +67,8 @@ class Maze:
 
     def printMaze(self, output_maze):
         '''Print ccmaze into output text file in original format'''
+        self.maze[self.endpt[0]][self.endpt[1]].value = 'E'
+
         with open(output_maze, 'w') as out_file:
             for row in range(self.maze_height):
                 for col in range(self.maze_width):
@@ -74,10 +76,10 @@ class Maze:
                         out_file.write('%c' % '%')
                     elif self.maze[col][row].value == Tile.BLANK or self.maze[col][row].value == Tile.VISITED:
                         out_file.write('%c' % ' ')
-                    elif (col, row) == self.endpt:
-                        out_file.write('%c' % 'E')
-                    else:
+                    elif self.maze[col][row].value == Tile.PATH:
                         out_file.write('%c' % '.')
+                    else:
+                        out_file.write('%c' % self.maze[col][row].value)
                 out_file.write('\n')
            
 def manDist((cur_x, cur_y), (goal_x, goal_y)):
@@ -142,9 +144,10 @@ def dfSearch(searchMaze):
             stack.pop()
             searchMaze.current_x, searchMaze.current_y = stack[-1]
     
-    # our stack holds our valid Tiles path from 'P' to '.', inclusively
+    # our stack holds our valid Tiles path from 'P' to '.', inclusively in-order
     for x, y in stack:
         searchMaze.maze[x][y].value = Tile.PATH
+    searchMaze.maze[stack[0][0]][stack[0][1]].value = 'S'
 
     # count the number of tiles in our solution path
     searchMaze.path_cost = len(stack)
@@ -223,7 +226,7 @@ def bfSearch(searchMaze):
             
     # the starting tile is not included in the loop above
     searchMaze.path_cost += 1
-    addTile.value = Tile.PATH        
+    addTile.value = 'S'        
             
     # and we're done!
    
@@ -279,7 +282,7 @@ def greedySearch(searchMaze):
         addTile.value = Tile.PATH
         addTile = searchMaze.maze[addTile.parent[0]][addTile.parent[1]]
     searchMaze.path_cost += 1
-    addTile.value = Tile.PATH     
+    addTile.value = 'S'     
     
 def astarSearch(searchMaze):   
     # we use a priority queue of (f(n)=total, g(n)=cost, coords) to prioritize shortest path to end goal
@@ -356,7 +359,7 @@ def astarSearch(searchMaze):
         addTile.value = Tile.PATH
         addTile = searchMaze.maze[addTile.parent[0]][addTile.parent[1]]
     searchMaze.path_cost += 1
-    addTile.value = Tile.PATH
+    addTile.value = 'S'
     
 def main():
     if len(sys.argv) not in (3,4):
