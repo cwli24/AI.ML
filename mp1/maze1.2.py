@@ -6,8 +6,8 @@ from Queue import PriorityQueue
 
 class Tile:
     '''Data structure object used to create a maze. With this construct, we define:
-    "Path cost"         as  number of Tiles in the valid path, marked by value of PATH
-    "Nodes expanded"    as  total number of Tiles visited, marked by value of VISITED+PATH
+    "Path cost"         as  number of steps in the valid path, marked by value of PATH
+    "Nodes expanded"    as  total number of Tiles visits, which includes PATH tiles
     '''
 
     # Enumeration for what Tile objects contain
@@ -15,8 +15,7 @@ class Tile:
     
     def __init__(self, tileDescription):
         self.value = tileDescription
-        self.parents = []
-        self.parents_itr = iter(self.parents) # a tile can now have multiple parents
+        self.parents = [] # a tile can now have multiple parents
 
 class Maze:
     '''Parsing the maze from input text file to data structure'''
@@ -52,20 +51,24 @@ class Maze:
     # Check if it is possible to travel in a given direction; we go in L,U,R,D order;
     # It's possible to revisit a tile multiple times in this case.
     def canTravelUp(self):
-        return 0 if self.maze[self.current_x][self.current_y-1].value == Tile.WALL else 1
+        next_position = self.maze[self.current_x][self.current_y-1].value
+        return 0 if next_position == Tile.WALL or next_position == Tile.VISITED else 1
     def canTravelDown(self):
-        return 0 if self.maze[self.current_x][self.current_y+1].value == Tile.WALL else 1
+        next_position = self.maze[self.current_x][self.current_y+1].value
+        return 0 if next_position == Tile.WALL or next_position == Tile.VISITED else 1
     def canTravelLeft(self):
-        return 0 if self.maze[self.current_x-1][self.current_y].value == Tile.WALL else 1
+        next_position = self.maze[self.current_x-1][self.current_y].value
+        return 0 if next_position == Tile.WALL or next_position == Tile.VISITED else 1
     def canTravelRight(self):
-        return 0 if self.maze[self.current_x+1][self.current_y].value == Tile.WALL else 1
+        next_position = self.maze[self.current_x+1][self.current_y].value
+        return 0 if next_position == Tile.WALL or next_position == Tile.VISITED else 1
 
     def printMaze(self, output_maze, ordered_endpts):
         '''Print ccmaze into output text file in original format'''
         label = '0'
-        for x, y in ordered_endpoints:
-        	self.maze[x][y].value = label
-        	label = 'a' if label == '9' else 'A' if label == 'z' else chr(ord(label)+1)
+        for x, y in ordered_endpts:
+            self.maze[x][y].value = label
+            label = 'a' if label == '9' else 'A' if label == 'z' else chr(ord(label)+1)
 
         with open(output_maze, 'w') as out_file:
             for row in range(self.maze_height):
@@ -84,12 +87,18 @@ def lowestManDist((cur_x, cur_y), goals_list):
     '''Manhattan distance formula applied to a list of coordinates'''
     lowest = 999
     for goal_x, goal_y in goals_list:
-    	if abs(cur_x - goal_x) + abs(cur_y - goal_y) < lowest: lowest = abs(cur_x-goal_x) + abs(cur_y-goal_y)
+        if abs(cur_x - goal_x) + abs(cur_y - goal_y) < lowest: lowest = abs(cur_x-goal_x) + abs(cur_y-goal_y)
     return lowest
 
+def clearVisits(maze):
+    '''Overwrites all Tiles value of VISITED'''
+    for x in range(maze.maze_width):
+        for y in range(maze.maze_height):
+            if maze.maze[x][y].value == Tile.VISITED: maze.maze[x][y].value = Tile.BLANK
+
 def astarSearch(searchMaze, goals_list_ordered):   
-	'''Our A* heuristic is the lowest Manhattan distance to any end points from our current
-	position at very step of branching.'''
+    '''Our A* heuristic is the lowest Manhattan distance to any end points from our current
+    position at very step of branching.'''
 
     # we use a priority queue of (f(n)=total, g(n)=cost, coords) to prioritize shortest path to end goal
     pqueue = PriorityQueue()
@@ -111,10 +120,10 @@ def astarSearch(searchMaze, goals_list_ordered):
 
             # create a path trace as we move
             addTile = searchMaze.maze[searchMaze.current_x-1][searchMaze.current_y]
-            addTile.parents.append((searchMaze.current_x, searchMaze.current_y))
+            #addTile.parents.append((searchMaze.current_x, searchMaze.current_y))
 
             if addTile.value == Tile.GOAL:
-            	# mark this next tile as the next reached goal
+                # mark this next tile as the next reached goal
                 searchMaze.current_x -= 1
                 goals_list_ordered.append((searchMaze.current_x, searchMaze.current_y))
 
@@ -126,29 +135,94 @@ def astarSearch(searchMaze, goals_list_ordered):
                 # this prevents loop from continuing earlier steps that did not include this end point
                 while not pqueue.empty(): pqueue.get()
 
-            # then update the closest goal from our current position and prioritize it
+                # wipes footprints off maze to allow repeated state detection for next goal
+                clearVisits(searchMaze)
+
+                # new initial and skip rest of the checks since we moved from original tile
+                addTile.value = Tile.VISITED
+                pqueue.put( (0, cost_so_far, (searchMaze.current_x, searchMaze.current_y)) )
+                continue
+
+            # else update the closest goal from our current position and prioritize it
             addTile.value = Tile.VISITED
             pqueue.put( (cost_so_far + lowestManDist(coord_pair, searchMaze.endpts), cost_so_far, coord_pair) )
                 
         if searchMaze.canTravelUp():
             coord_pair = (searchMaze.current_x, searchMaze.current_y-1)
+
+            addTile = searchMaze.maze[searchMaze.current_x][searchMaze.current_y-1]
+            #addTile.parents.append((searchMaze.current_x, searchMaze.current_y))
+
+            if addTile.value == Tile.GOAL:
+                searchMaze.current_y -= 1
+                goals_list_ordered.append((searchMaze.current_x, searchMaze.current_y))
+
+                goalsLeft -= 1
+                searchMaze.endpts.remove((searchMaze.current_x, searchMaze.current_y))
+
+                while not pqueue.empty(): pqueue.get()
+                clearVisits(searchMaze)
+                addTile.value = Tile.VISITED
+                pqueue.put( (0, cost_so_far, (searchMaze.current_x, searchMaze.current_y)) )
+                continue
+
+            addTile.value = Tile.VISITED
+            pqueue.put( (cost_so_far + lowestManDist(coord_pair, searchMaze.endpts), cost_so_far, coord_pair) )
         
         if searchMaze.canTravelRight():
             coord_pair = (searchMaze.current_x+1, searchMaze.current_y)
+
+            addTile = searchMaze.maze[searchMaze.current_x+1][searchMaze.current_y]
+            #addTile.parents.append((searchMaze.current_x, searchMaze.current_y))
+
+            if addTile.value == Tile.GOAL:
+                searchMaze.current_x += 1
+                goals_list_ordered.append((searchMaze.current_x, searchMaze.current_y))
+
+                goalsLeft -= 1
+                searchMaze.endpts.remove((searchMaze.current_x, searchMaze.current_y))
+
+                while not pqueue.empty(): pqueue.get()
+                clearVisits(searchMaze)
+                addTile.value = Tile.VISITED
+                pqueue.put( (0, cost_so_far, (searchMaze.current_x, searchMaze.current_y)) )
+                continue
+
+            addTile.value = Tile.VISITED
+            pqueue.put( (cost_so_far + lowestManDist(coord_pair, searchMaze.endpts), cost_so_far, coord_pair) )
     
         if searchMaze.canTravelDown():
             coord_pair = (searchMaze.current_x, searchMaze.current_y+1)
 
+            addTile = searchMaze.maze[searchMaze.current_x][searchMaze.current_y+1]
+            #addTile.parents.append((searchMaze.current_x, searchMaze.current_y))
+
+            if addTile.value == Tile.GOAL:
+                searchMaze.current_y += 1
+                goals_list_ordered.append((searchMaze.current_x, searchMaze.current_y))
+
+                goalsLeft -= 1
+                searchMaze.endpts.remove((searchMaze.current_x, searchMaze.current_y))
+
+                while not pqueue.empty(): pqueue.get()
+                clearVisits(searchMaze)
+                addTile.value = Tile.VISITED
+                pqueue.put( (0, cost_so_far, (searchMaze.current_x, searchMaze.current_y)) )
+                continue
+
+            addTile.value = Tile.VISITED
+            pqueue.put( (cost_so_far + lowestManDist(coord_pair, searchMaze.endpts), cost_so_far, coord_pair) )
+
     # notice that even if we backtrack through the 'P' tile multiple times, we'll always
-    # reach an end in the parents/iter link because it started with an empty parent list
-    while addTile.parents_itr:
-        try:
-        	prevCoord = addTile.parents_itr.next()
-        	addTile.value = Tile.PATH
-        	addTile = searchMaze.maze[prevCoord[0]][prevCoord[1]]
-        except StopIteration:
-        	break		# we've reached our starting point!
-    addTile.value = 'S'
+    # reach an end in the parents link because it started with an empty parent list
+    # while addTile.parents:
+    #     print 'parents for', prevCoord, ':', addTile.parents
+    #     prevCoord = addTile.parents.pop()
+    #     addTile.value = Tile.PATH
+    #     addTile = searchMaze.maze[prevCoord[0]][prevCoord[1]]
+
+    # we've reached our starting point!
+    #addTile.value = 'S'
     searchMaze.path_cost = cost_so_far
 
 def main():
@@ -168,7 +242,7 @@ def main():
         searchMaze.printMaze(sys.argv[2], goals_ordered)
 
     print 'Path cost of the solution:', searchMaze.path_cost, 'steps'
-    print 'Number of nodes expanded by', searchAlgorithm, 'search algorithm:', searchMaze.nodes_expd
+    print 'Number of nodes expanded by A* search algorithm:', searchMaze.nodes_expd
 
 if __name__ == "__main__":
     main()
