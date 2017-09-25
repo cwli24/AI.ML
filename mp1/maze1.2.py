@@ -2,7 +2,7 @@
 """Search for the solution to mazes with multiple goals using A* algorithm."""
 
 import sys
-from Queue import PriorityQueue
+import heapq as hq
 
 class Tile:
     '''Data structure object used to create a maze. With this construct, we define:
@@ -100,20 +100,18 @@ def astarSearch(searchMaze, goals_list_ordered):
     '''Our A* heuristic is the lowest Manhattan distance to any end points from our current
     position at very step of branching.'''
 
-    # we use a priority queue of (f(n)=total, g(n)=cost, coords) to prioritize shortest path to end goal
-    pqueue = PriorityQueue()
-
-    # at start, cost is 0 and total cost is to be calculated--so DC
-    pqueue.put( (0, 0, (searchMaze.current_x, searchMaze.current_y)) )
+    # we use a priority queue of (f(n)=total, g(n)=-cost, coords) to prioritize shortest path to end goal
+    pqueue = []
+    hq.heappush(pqueue, (0, 0, (searchMaze.current_x, searchMaze.current_y)) )
 
     goalsLeft = len(searchMaze.endpts)
     while 0 < goalsLeft:
         # grab lowest total cost coordinate and expand it
-        total_cost, cost_so_far, (searchMaze.current_x, searchMaze.current_y) = pqueue.get()
+        total_cost, cost_so_far, (searchMaze.current_x, searchMaze.current_y) = hq.heappop(pqueue)
         searchMaze.nodes_expd += 1
         
         # if we can't travel any direction, this value gets trashed, so DW (yay!)
-        cost_so_far += 1
+        cost_so_far -= 1
         
         if searchMaze.canTravelLeft():
             coord_pair = (searchMaze.current_x-1, searchMaze.current_y)
@@ -133,19 +131,19 @@ def astarSearch(searchMaze, goals_list_ordered):
 
                 # tree search from this "new" position, effectively treating each end point separately
                 # this prevents loop from continuing earlier steps that did not include this end point
-                while not pqueue.empty(): pqueue.get()
+                pqueue[:] = []
 
                 # wipes footprints off maze to allow repeated state detection for next goal
                 clearVisits(searchMaze)
 
                 # new initial and skip rest of the checks since we moved from original tile
                 addTile.value = Tile.VISITED
-                pqueue.put( (0, cost_so_far, (searchMaze.current_x, searchMaze.current_y)) )
+                hq.heappush(pqueue, (0, cost_so_far, (searchMaze.current_x, searchMaze.current_y)) )
                 continue
 
             # else update the closest goal from our current position and prioritize it
             addTile.value = Tile.VISITED
-            pqueue.put( (cost_so_far + lowestManDist(coord_pair, searchMaze.endpts), cost_so_far, coord_pair) )
+            hq.heappush(pqueue, (-cost_so_far + lowestManDist(coord_pair, searchMaze.endpts), cost_so_far, coord_pair) )
                 
         if searchMaze.canTravelUp():
             coord_pair = (searchMaze.current_x, searchMaze.current_y-1)
@@ -160,14 +158,14 @@ def astarSearch(searchMaze, goals_list_ordered):
                 goalsLeft -= 1
                 searchMaze.endpts.remove((searchMaze.current_x, searchMaze.current_y))
 
-                while not pqueue.empty(): pqueue.get()
+                pqueue[:] = []
                 clearVisits(searchMaze)
                 addTile.value = Tile.VISITED
-                pqueue.put( (0, cost_so_far, (searchMaze.current_x, searchMaze.current_y)) )
+                hq.heappush(pqueue, (0, cost_so_far, (searchMaze.current_x, searchMaze.current_y)) )
                 continue
 
             addTile.value = Tile.VISITED
-            pqueue.put( (cost_so_far + lowestManDist(coord_pair, searchMaze.endpts), cost_so_far, coord_pair) )
+            hq.heappush(pqueue, (-cost_so_far + lowestManDist(coord_pair, searchMaze.endpts), cost_so_far, coord_pair) )
         
         if searchMaze.canTravelRight():
             coord_pair = (searchMaze.current_x+1, searchMaze.current_y)
@@ -182,14 +180,14 @@ def astarSearch(searchMaze, goals_list_ordered):
                 goalsLeft -= 1
                 searchMaze.endpts.remove((searchMaze.current_x, searchMaze.current_y))
 
-                while not pqueue.empty(): pqueue.get()
+                pqueue[:] = []
                 clearVisits(searchMaze)
                 addTile.value = Tile.VISITED
-                pqueue.put( (0, cost_so_far, (searchMaze.current_x, searchMaze.current_y)) )
+                hq.heappush(pqueue, (0, cost_so_far, (searchMaze.current_x, searchMaze.current_y)) )
                 continue
 
             addTile.value = Tile.VISITED
-            pqueue.put( (cost_so_far + lowestManDist(coord_pair, searchMaze.endpts), cost_so_far, coord_pair) )
+            hq.heappush(pqueue, (-cost_so_far + lowestManDist(coord_pair, searchMaze.endpts), cost_so_far, coord_pair) )
     
         if searchMaze.canTravelDown():
             coord_pair = (searchMaze.current_x, searchMaze.current_y+1)
@@ -204,14 +202,14 @@ def astarSearch(searchMaze, goals_list_ordered):
                 goalsLeft -= 1
                 searchMaze.endpts.remove((searchMaze.current_x, searchMaze.current_y))
 
-                while not pqueue.empty(): pqueue.get()
+                pqueue[:] = []
                 clearVisits(searchMaze)
                 addTile.value = Tile.VISITED
-                pqueue.put( (0, cost_so_far, (searchMaze.current_x, searchMaze.current_y)) )
+                hq.heappush(pqueue, (0, cost_so_far, (searchMaze.current_x, searchMaze.current_y)) )
                 continue
 
             addTile.value = Tile.VISITED
-            pqueue.put( (cost_so_far + lowestManDist(coord_pair, searchMaze.endpts), cost_so_far, coord_pair) )
+            hq.heappush(pqueue, (-cost_so_far + lowestManDist(coord_pair, searchMaze.endpts), cost_so_far, coord_pair) )
 
     # notice that even if we backtrack through the 'P' tile multiple times, we'll always
     # reach an end in the parents link because it started with an empty parent list
@@ -223,7 +221,7 @@ def astarSearch(searchMaze, goals_list_ordered):
 
     # we've reached our starting point!
     #addTile.value = 'S'
-    searchMaze.path_cost = cost_so_far
+    searchMaze.path_cost = -cost_so_far
 
 def main():
     if len(sys.argv) not in (2,3):
