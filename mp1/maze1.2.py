@@ -3,6 +3,7 @@
 
 import sys
 import heapq as hq
+from math import sqrt
 
 class Tile:
     '''Data structure object used to create a maze. With this construct, we define:
@@ -52,23 +53,23 @@ class Maze:
     # It's possible to revisit a tile multiple times in this case.
     def canTravelUp(self):
         next_position = self.maze[self.current_x][self.current_y-1].value
-        return 0 if next_position == Tile.WALL or next_position == Tile.VISITED else 1
+        return 0 if next_position == Tile.WALL else 1
     def canTravelDown(self):
         next_position = self.maze[self.current_x][self.current_y+1].value
-        return 0 if next_position == Tile.WALL or next_position == Tile.VISITED else 1
+        return 0 if next_position == Tile.WALL else 1
     def canTravelLeft(self):
         next_position = self.maze[self.current_x-1][self.current_y].value
-        return 0 if next_position == Tile.WALL or next_position == Tile.VISITED else 1
+        return 0 if next_position == Tile.WALL else 1
     def canTravelRight(self):
         next_position = self.maze[self.current_x+1][self.current_y].value
-        return 0 if next_position == Tile.WALL or next_position == Tile.VISITED else 1
+        return 0 if next_position == Tile.WALL else 1
 
     def printMaze(self, output_maze, ordered_endpts):
         '''Print ccmaze into output text file in original format'''
         label = '0'
         for x, y in ordered_endpts:
             self.maze[x][y].value = label
-            label = 'a' if label == '9' else 'A' if label == 'z' else chr(ord(label)+1)
+            label = 'a' if label == '9' else 'A' if label == 'z' else '0' if label == 'Z' else chr(ord(label)+1)
 
         with open(output_maze, 'w') as out_file:
             for row in range(self.maze_height):
@@ -84,11 +85,18 @@ class Maze:
                 out_file.write('\n')
            
 def lowestManDist((cur_x, cur_y), goals_list):
-    '''Manhattan distance formula applied to a list of coordinates'''
+    '''Manhattan distance formula applied to a list of coordinates; ADMISSIBLE'''
     lowest = 999
     for goal_x, goal_y in goals_list:
         if abs(cur_x - goal_x) + abs(cur_y - goal_y) < lowest: lowest = abs(cur_x-goal_x) + abs(cur_y-goal_y)
     return lowest
+
+def avgManDist((cur_x, cur_y), goals_list):
+    '''Manhattan distance formula applied to a list of coordinates; NON-ADMISSIBLE'''
+    sum = 0
+    for goal_x, goal_y in goals_list:
+        sum += abs(cur_x-goal_x) + abs(cur_y-goal_y)
+    return sum/len(goals_list)
 
 def clearVisits(maze):
     '''Overwrites all Tiles value of VISITED'''
@@ -96,7 +104,7 @@ def clearVisits(maze):
         for y in range(maze.maze_height):
             if maze.maze[x][y].value == Tile.VISITED: maze.maze[x][y].value = Tile.BLANK
 
-def astarSearch(searchMaze, goals_list_ordered):   
+def astarSearch(searchMaze, goals_list_ordered, h):   
     '''Our A* heuristic is the lowest Manhattan distance to any end points from our current
     position at very step of branching.'''
 
@@ -143,7 +151,7 @@ def astarSearch(searchMaze, goals_list_ordered):
 
             # else update the closest goal from our current position and prioritize it
             addTile.value = Tile.VISITED
-            hq.heappush(pqueue, (-cost_so_far + lowestManDist(coord_pair, searchMaze.endpts), cost_so_far, coord_pair) )
+            hq.heappush(pqueue, (-cost_so_far + h(coord_pair, searchMaze.endpts), cost_so_far, coord_pair) )
                 
         if searchMaze.canTravelUp():
             coord_pair = (searchMaze.current_x, searchMaze.current_y-1)
@@ -165,7 +173,7 @@ def astarSearch(searchMaze, goals_list_ordered):
                 continue
 
             addTile.value = Tile.VISITED
-            hq.heappush(pqueue, (-cost_so_far + lowestManDist(coord_pair, searchMaze.endpts), cost_so_far, coord_pair) )
+            hq.heappush(pqueue, (-cost_so_far + h(coord_pair, searchMaze.endpts), cost_so_far, coord_pair) )
         
         if searchMaze.canTravelRight():
             coord_pair = (searchMaze.current_x+1, searchMaze.current_y)
@@ -187,7 +195,7 @@ def astarSearch(searchMaze, goals_list_ordered):
                 continue
 
             addTile.value = Tile.VISITED
-            hq.heappush(pqueue, (-cost_so_far + lowestManDist(coord_pair, searchMaze.endpts), cost_so_far, coord_pair) )
+            hq.heappush(pqueue, (-cost_so_far + h(coord_pair, searchMaze.endpts), cost_so_far, coord_pair) )
     
         if searchMaze.canTravelDown():
             coord_pair = (searchMaze.current_x, searchMaze.current_y+1)
@@ -209,7 +217,7 @@ def astarSearch(searchMaze, goals_list_ordered):
                 continue
 
             addTile.value = Tile.VISITED
-            hq.heappush(pqueue, (-cost_so_far + lowestManDist(coord_pair, searchMaze.endpts), cost_so_far, coord_pair) )
+            hq.heappush(pqueue, (-cost_so_far + h(coord_pair, searchMaze.endpts), cost_so_far, coord_pair) )
 
     # notice that even if we backtrack through the 'P' tile multiple times, we'll always
     # reach an end in the parents link because it started with an empty parent list
@@ -231,9 +239,12 @@ def main():
     # Instantiate the required mazes
     searchMaze = Maze(sys.argv[1])
 
+    # Choose our h(n): lowest for 1.2, avg for EC
+    heuristic = lowestManDist
+
     # Perform the search
     goals_ordered = []
-    astarSearch(searchMaze, goals_ordered)
+    astarSearch(searchMaze, goals_ordered, heuristic)
         
     # Output the searched maze
     if len(sys.argv) == 3:
