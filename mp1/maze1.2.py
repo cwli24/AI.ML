@@ -53,16 +53,16 @@ class Maze:
     # It's possible to revisit a tile multiple times in this case.
     def canTravelUp(self):
         next_position = self.maze[self.current_x][self.current_y-1].value
-        return 0 if next_position == Tile.WALL else 1
+        return 0 if next_position == Tile.WALL or next_position == Tile.VISITED else 1
     def canTravelDown(self):
         next_position = self.maze[self.current_x][self.current_y+1].value
-        return 0 if next_position == Tile.WALL else 1
+        return 0 if next_position == Tile.WALL or next_position == Tile.VISITED else 1
     def canTravelLeft(self):
         next_position = self.maze[self.current_x-1][self.current_y].value
-        return 0 if next_position == Tile.WALL else 1
+        return 0 if next_position == Tile.WALL or next_position == Tile.VISITED else 1
     def canTravelRight(self):
         next_position = self.maze[self.current_x+1][self.current_y].value
-        return 0 if next_position == Tile.WALL else 1
+        return 0 if next_position == Tile.WALL or next_position == Tile.VISITED else 1
 
     def printMaze(self, output_maze, ordered_endpts):
         '''Print ccmaze into output text file in original format'''
