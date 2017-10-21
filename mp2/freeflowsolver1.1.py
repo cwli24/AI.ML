@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 import sys, os.path
+from random import sample
 
 def dumbBacktracking(matrix, colorSet, srcCells, currentEmpty, numEmptyCells):
     if numEmptyCells == 0:
         return 0
   
-    for color in colorSet:
+    for color in sample(colorSet, len(colorSet)):
         (x, y) = currentEmpty
         matrix[x][y] = color
         result = dumbBacktracking(matrix, colorSet, srcCells, findNextEmpty(currentEmpty), numEmptyCells-1)
