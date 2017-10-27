@@ -2,19 +2,25 @@
 import sys, os.path
 from random import sample
 
+count = 0
+
 def dumbBacktracking(matrix, colorSet, srcCells, currentEmpty, numEmptyCells):
+    global count
+
     if numEmptyCells == 0:
         return 0
-    
+
     # try each color in the colorset
     for color in sample(colorSet, len(colorSet)):
         x, y = currentEmpty
         matrix[y][x] = color
+        count += 1
 
-        #print '\n'.join([''.join([col for col in row]) for row in matrix])
-        #print '---------'
+        # print '\n'.join([''.join([col for col in row]) for row in matrix])
+        # print '---------'
+
         result = dumbBacktracking(matrix, colorSet, srcCells, findNextEmpty(matrix), numEmptyCells-1)
-        
+
         # if our assignment met constraints and this still satisfies them, we backtrack check
         if result == 0:
             adjCounter = 0
@@ -26,16 +32,14 @@ def dumbBacktracking(matrix, colorSet, srcCells, currentEmpty, numEmptyCells):
                 adjCounter += 1
             if y+1 < height and matrix[y+1][x] == color:
                 adjCounter += 1
-        
+
             if (adjCounter == 2 and (x, y) not in srcCells) or (adjCounter == 1 and (x, y) in srcCells):
                 return 0
-          
+
         # if current color does not work, clear everything
         # from this position to the end of the matrix and try
-        # a new color 
-        for i in range(y*width+x, width*height):
-            if (i%width, int(i/width)) not in srcCells:
-               matrix[int(i/width)][i%width] = '_'
+        # a new color
+        resetGrid(matrix, srcCells, x, y)
 
     return -1
 
@@ -51,11 +55,17 @@ def findNextEmpty(matrix):
 def smartBacktracking():
     return
 
+def resetGrid(matrix, srcCells, x, y):
+    for i in range(y * width + x, width * height):
+            if (i % width, int(i / width)) not in srcCells:
+               matrix[int(i / width)][i % width] = '_'
+
 def main():
+    global count
     if not os.path.exists(sys.argv[1]):
         print 'Input file does not exist'
         sys.exit(1)
-  
+
     # parse input flow free as 2D char matrix
     global width, height
 
@@ -80,10 +90,32 @@ def main():
 
     # -- replace the dumb algorithm with smart algorithm here --
     # initial call to the recursive backtracking
-    if dumbBacktracking(matrix, colors, endpts, findNextEmpty(matrix), width*height-len(endpts)) == -1:
-        print 'No solution to Flow Free puzzle was found!'
 
-    print '\n'.join([''.join([col for col in row]) for row in matrix])
-  
+    # if dumbBacktracking(matrix, colors, endpts, findNextEmpty(matrix), width*height-len(endpts)) == -1:
+    #     print 'No solution to Flow Free puzzle was found!'
+
+    # print '\n'.join([''.join([col for col in row]) for row in matrix])
+
+    sum = 0
+    max = 0
+    iters = 1000
+    for i in range(iters):
+        count = 0
+        if dumbBacktracking(matrix, colors, endpts, findNextEmpty(
+            matrix), width * height - len(endpts)) == -1:
+            print 'No sol found'
+        else:
+            # print 'num assignments: ' + str(count)
+            sum += count
+            if count > max: max = count
+
+
+        resetGrid(matrix, endpts, 0, 0)
+
+    sum /= iters
+    print 'avg iterations: ' + str(sum)
+    print 'max iterations: ' + str(max)
+
+
 if __name__ == "__main__":
     main()
