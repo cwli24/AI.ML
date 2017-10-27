@@ -4,6 +4,25 @@ from random import sample
 
 count = 0
 
+# ----------- HELPER FUNCTIONS ----------------------- #
+
+def resetGrid(matrix, srcCells, x, y):
+    for i in range(y * width + x, width * height):
+            if (i % width, int(i / width)) not in srcCells:
+               matrix[int(i / width)][i % width] = '_'
+
+# find the next empty space in the matrix
+# note that the matrix is indexed by (y,x)
+def findNextEmpty(matrix):
+    for row in range(0, height):
+        for col in range(0, width):
+            if matrix[row][col] == '_':
+                return (col, row)
+    return (0, 0)
+
+
+# ----------- BACKTRACKING FUNCTIONS ----------------- #
+
 def dumbBacktracking(matrix, colorSet, srcCells, currentEmpty, numEmptyCells):
     global count
 
@@ -43,22 +62,8 @@ def dumbBacktracking(matrix, colorSet, srcCells, currentEmpty, numEmptyCells):
 
     return -1
 
-# find the next empty space in the matrix
-# note that the matrix is indexed by (y,x)
-def findNextEmpty(matrix):
-    for row in range(0, height):
-        for col in range(0, width):
-            if matrix[row][col] == '_':
-                return (col, row)
-    return (0,0)
-
 def smartBacktracking():
     return
-
-def resetGrid(matrix, srcCells, x, y):
-    for i in range(y * width + x, width * height):
-            if (i % width, int(i / width)) not in srcCells:
-               matrix[int(i / width)][i % width] = '_'
 
 def main():
     global count
