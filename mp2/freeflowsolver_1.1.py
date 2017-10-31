@@ -90,8 +90,7 @@ def smartBacktracking(matrix, coordColor, srcCellsSet):
     if len(coordColor) == 0:
         return True
 
-    origCoordColor = copy.deepcopy(coordColor)
-    print coordColor
+    copyCoordColor = copy.deepcopy(coordColor)
 
     for cellX, cellY, cellColor in [(x, y, matrix[y][x]) for y in range(height) for x in range(width)]:
         if cellColor == '_':
@@ -104,11 +103,13 @@ def smartBacktracking(matrix, coordColor, srcCellsSet):
                 if len(emptyNbs) == 0:
                     return False
                 elif len(emptyNbs) == 1:
-                    coordColor[emptyNbs[0]] = set(cellColor)
+                    copyCoordColor[emptyNbs[0]] = set(cellColor)
                 # else 2 or more empty neighbors
             elif len(sameColNbs) == 1:
                 for xy in emptyNbs:
-                    coordColor[xy].discard(cellColor)
+                    copyCoordColor[xy].discard(cellColor)
+                    if len(copyCoordColor[xy]) == 0:
+                        return False
             else: # 2, 3, or 4 same color neighbors
                 return False
         else:
@@ -120,49 +121,57 @@ def smartBacktracking(matrix, coordColor, srcCellsSet):
             elif len(emptyNbs) == 1:
                 if len(sameColNbs) == 1:
                     # empty neighbor must be restricted to same color
-                    coordColor[emptyNbs[0]] = set(cellColor)
+                    copyCoordColor[emptyNbs[0]] = set(cellColor)
                 elif len(sameColNbs) == 2:
                     # empty neighbor cannot be same color
-                    coordColor[emptyNbs[0]].discard(cellColor)
+                    copyCoordColor[emptyNbs[0]].discard(cellColor)
+                    if len(copyCoordColor[emptyNbs[0]]) == 0:
+                        return False
                 else: # sameColorNeighborCt == 0 or sameColorNeighborCt == 3:
                     return False
 
             elif len(emptyNbs) == 2:
                 if len(sameColNbs) == 0:
                     for xy in emptyNbs:
-                        coordColor[xy] = set(cellColor)
+                        copyCoordColor[xy] = set(cellColor)
                 elif len(sameColNbs) == 2:
                     for xy in emptyNbs:
-                        coordColor[xy].discard(cellColor)
+                        copyCoordColor[xy].discard(cellColor)
+                        if len(copyCoordColor[xy]) == 0:
+                            return False
                 # else, number of sameColorNbs is 1
 
             # else, empty neighbors is 3 or 4
 
-    for colorset in coordColor.values():
-        if len(colorset) == 0:
-            return False
+        # quad/square of same color checking; speeds up computation
+        if len(sameColNbs) == 2:
+            (x1, y1), (x2, y2) = sameColNbs
+            if x1 != x2 and y1 != y2:
+                cornerX = x1 if x1 != cellX else x2
+                cornerY = y1 if y1 != cellY else y2
+                if matrix[cornerY][cornerX] == cellColor:
+                    return False
 
-    sortedConstVars = sorted(coordColor.items(), key=operator.itemgetter(1))
-    mostConstVar = copy.deepcopy(sortedConstVars[0])   # ((x,y), set(['r',...]))
+    sortedConstVars = sorted(copyCoordColor.items(), key=operator.itemgetter(1))
+    mostConstVar = sortedConstVars[0]   # ((x,y), set(['r',...]))
     (x, y), mCVDomain = mostConstVar
-    del coordColor[(x,y)]
+    del copyCoordColor[(x,y)]
 
     for color in mCVDomain:
         matrix[y][x] = color
         count += 1
+        if count > 50:
+            return False
 
-        print '(x, y):', x, y, ' domain:', mCVDomain
         print '\n'.join([''.join([col for col in row]) for row in matrix])
-        print '-----------'
+        print '-----------' + str((x, y)) + str(color)
 
-        if smartBacktracking(matrix, coordColor, srcCellsSet) is True:
+        if smartBacktracking(matrix, copyCoordColor, srcCellsSet) is True:
             return True
         else:
             continue
 
     matrix[y][x] = '_'
-    coordColor = origCoordColor
-
     return False
 
 def main():
