@@ -8,6 +8,7 @@ SMOOTH_CONSTANT = 0.1   # can be any value in range 0.1 and 10, but the higher t
 FEAT_VALUES = 2         # f in {0,1}
 IMG_WIDTH = 28
 IMG_HEIGHT = 28
+NUM_CLASSES = 10
 NUM_TRAINING_EXEMPLARS = 5000
 NUM_TESTING_EXEMPLARS = 1000
 
@@ -19,15 +20,15 @@ test_data_fpath = digit_data_dpath + 'testimages'
 test_labels_fpath = digit_data_dpath + 'testlabels'
 
 # global data structures
-class_train_ct = [0]*10       # for digit classes 0-9
-class_priors = [0.0]*10       # (float) P(class)
-likelihood_matrices = map(np.matrix, [ [[0.0]*IMG_HEIGHT for _ in range(IMG_WIDTH)] ]*10)    # P(F_{ij} = f | class)
+class_train_ct = [0]*NUM_CLASSES       # for digit classes 0-9
+class_priors = [0.0]*NUM_CLASSES       # (float) P(class)
+likelihood_matrices = map(np.matrix, [ [[0.0]*IMG_HEIGHT for _ in range(IMG_WIDTH)] ]*NUM_CLASSES)    # P(F_{ij} = f | class)
 
 class_guess = [None]*NUM_TESTING_EXEMPLARS
-class_test_ct = [0]*10
-classification_rate = [0.0]*10
-confusion_matrix = np.matrix([[0.0]*10 for _ in range(10)])    # careful not to bamboozle yourself
-prototypical_img_loc = [ (float('inf'), 0, float('-inf'), 0) ]*10    # minMAP, minIdx, maxMAP, maxIdx
+class_test_ct = [0]*NUM_CLASSES
+classification_rate = [0.0]*NUM_CLASSES
+confusion_matrix = np.matrix([[0.0]*NUM_CLASSES for _ in range(NUM_CLASSES)])    # careful not to bamboozle yourself
+prototypical_img_loc = [ (float('inf'), 0, float('-inf'), 0) ]*NUM_CLASSES    # minMAP, minIdx, maxMAP, maxIdx
     
 def compute_likelihood():
     # go through the features' counts and calculate their likelihood wrt each class with Laplace smoothing
@@ -54,7 +55,7 @@ def get_confusing_idx(confusion_matrix):
     # get row, col for cells with max confusion rate
     most_confusing = []
     
-    for i in range(10): confusion_matrix[i, i] = 0.0
+    for i in range(NUM_CLASSES): confusion_matrix[i, i] = 0.0
 
     # flatten matrix, get top 4 indices
     flat = (np.asarray(confusion_matrix)).flatten()
@@ -76,8 +77,8 @@ with open(train_data_fpath, 'r') as train_images, open(train_labels_fpath, 'r') 
         class_num = int(class_lbl)
 
         # compute the feature values for this example training image
-        train_img_fvals = np.matrix([[0]*IMG_WIDTH for _ in range(IMG_WIDTH)])
-        for row_idx in range(IMG_WIDTH):
+        train_img_fvals = np.matrix([[0]*IMG_HEIGHT for _ in range(IMG_WIDTH)])
+        for row_idx in range(IMG_HEIGHT):
             row_data = train_images.readline()
             for col_idx in range(IMG_WIDTH):
                 if row_data[col_idx] == '+' or row_data[col_idx] == '#':
@@ -94,7 +95,7 @@ compute_likelihood()
 with open(test_data_fpath, 'r') as test_images:
 
     for nth_img in range(NUM_TESTING_EXEMPLARS):
-        class_MAP = [None]*10
+        class_MAP = [None]*NUM_CLASSES
         
         # grab pixel data -> features from this test image
         test_img_fvals = np.matrix([[0]*IMG_HEIGHT for _ in range(IMG_WIDTH)])
@@ -157,7 +158,7 @@ for idx in range(len(classification_rate)):
 #print_highest_lowest_MAP_images()
 
 def print_odds(matrix):
-    for row_idx in range(IMG_WIDTH):
+    for row_idx in range(IMG_HEIGHT):
         for col_idx in range(IMG_WIDTH):
             temp = math.log(matrix[row_idx, col_idx]) 
             if temp > -0.75 and temp < 1.25: print ' ',
@@ -166,7 +167,7 @@ def print_odds(matrix):
         print ''
 
 def print_class(matrix):
-    for row_idx in range(IMG_WIDTH):
+    for row_idx in range(IMG_HEIGHT):
         for col_idx in range(IMG_WIDTH):
             temp = math.log(matrix[row_idx, col_idx])
             if temp > -1.1 and temp < -0.9: print ' ',
