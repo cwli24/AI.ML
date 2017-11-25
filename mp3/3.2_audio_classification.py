@@ -43,7 +43,7 @@ def compute_likelihood_priors(model_matrices, class_ct):
         # compute priors
         class_priors[class_index] = class_ct[class_index] / float(sum(class_ct))
 
-def calculate_classes_likelihood(model_matrices, test_matrix):
+def calculate_classes_likelihood(model_matrices, test_matrix, is_ec_columns):
     class_MAP = [None]*NUM_CLASSES
 
     # figuring out the likelihood that each sample belongs to 'yes' or 'no' classes
@@ -53,14 +53,19 @@ def calculate_classes_likelihood(model_matrices, test_matrix):
         # to avoid underflow, we work with the log of P(class)*P(f_{1,1}|class)*...*P(f_{25,10}|class)
         posterior_prob = math.log(class_priors[which_class])
         
-        # calculate log P(class)+log P(f_{1,1}|class)+log P(f_{1,2}|class)+...+log P(f_{25,10}|class)
-        for row_idx in range(SAMP_HEIGHT):
-            for col_idx in range(SAMP_WIDTH):
-                if test_matrix[row_idx, col_idx] == 1:
-                    posterior_prob += math.log(class_matrix[row_idx, col_idx])
-                else:
-                    posterior_prob += math.log(1 - class_matrix[row_idx, col_idx])
-                    
+        if not is_ec_columns:
+            # calculate log P(class)+log P(f_{1,1}|class)+log P(f_{1,2}|class)+...+log P(f_{25,10}|class)
+            for row_idx in range(SAMP_HEIGHT):
+                for col_idx in range(SAMP_WIDTH):
+                    if test_matrix[row_idx, col_idx] == 1:
+                        posterior_prob += math.log(class_matrix[row_idx, col_idx])
+                    else:
+                        posterior_prob += math.log(1 - class_matrix[row_idx, col_idx])
+        else:
+            for row_idx in range(SAMP_HEIGHT):
+                posterior_prob += math.log( test_matrix[row_idx, 0]*class_matrix[row_idx, 0] +
+                    (1 - test_matrix[row_idx, 0])*(1 - class_matrix[row_idx, 0]) )
+
         # save the MAP prob for each class, determine test guess based on argmax of values
         class_MAP[which_class] = posterior_prob
     return class_MAP
@@ -113,7 +118,7 @@ def main():
             for empty_line in range(3):
                 test_yes.readline()
             
-            class_MAP = calculate_classes_likelihood(likelihood_matrices, test_aud_fvals)
+            class_MAP = calculate_classes_likelihood(likelihood_matrices, test_aud_fvals, False)
 
             # closely matching test audio have MAP ~1.0 (due to log)
             class_guess[nth_y_aud] = 0 if class_MAP[0] > class_MAP[1] else 1
@@ -129,7 +134,7 @@ def main():
             for empty_line in range(3):
                 test_no.readline()
             
-            class_MAP = calculate_classes_likelihood(likelihood_matrices, test_aud_fvals)
+            class_MAP = calculate_classes_likelihood(likelihood_matrices, test_aud_fvals, False)
                 
             # closely matching test audio have MAP ~1.0 (due to log)
             class_guess[nth_n_aud + NUM_TESTING_YES] = 0 if class_MAP[0] > class_MAP[1] else 1
@@ -166,7 +171,9 @@ def main():
 
 def extra_credit():
     class_train_ct = [0, 0]
+    likelihood_matrices_columns = map(np.matrix, [ [[0.0] for _ in range(SAMP_HEIGHT)] ]*NUM_CLASSES)
 
+    ### train the Part 2.1 classifier using an unsegmented version of the same data (bullet 1)
     for rawtext in os.listdir(training_ec_dpath):
         training_segments = []
         for char in rawtext:
@@ -226,6 +233,14 @@ def extra_credit():
             likelihood_matrices[which_class] += training_fvals
             class_train_ct[which_class] += 1
 
+    ## this snippet is for bullet 3 ##
+    for corpus in range(NUM_CLASSES):
+        for row in range(SAMP_HEIGHT):
+            for col in range(SAMP_WIDTH):
+                likelihood_matrices_columns[corpus][row, 0] += likelihood_matrices[corpus][row, col]
+        likelihood_matrices_columns[corpus] /= SAMP_WIDTH
+    ##################################
+
     compute_likelihood_priors(likelihood_matrices, class_train_ct)
 
     yes_tests = 0
@@ -239,7 +254,7 @@ def extra_credit():
                 for col in range(SAMP_WIDTH):
                     if line[col] == ' ':    testing_fvals[row, col] = 1
 
-        class_MAP = calculate_classes_likelihood(likelihood_matrices, testing_fvals)
+        class_MAP = calculate_classes_likelihood(likelihood_matrices, testing_fvals, False)
         if class_MAP[0] > class_MAP[1]:
             confusion_matrix[0, 1] += 1     # columns (guesses) are flipped because we map 0 to 'yes' but data maps it to 1
         else:
@@ -258,7 +273,7 @@ def extra_credit():
                 for col in range(SAMP_WIDTH):
                     if line[col] == ' ':    testing_fvals[row, col] = 1
 
-        class_MAP = calculate_classes_likelihood(likelihood_matrices, testing_fvals)
+        class_MAP = calculate_classes_likelihood(likelihood_matrices, testing_fvals, False)
         if class_MAP[0] > class_MAP[1]:
             confusion_matrix[1, 1] += 1
         else:
@@ -268,6 +283,48 @@ def extra_credit():
 
     # TO PRINT FOR REPORT, UNCOMMENT THESE: 
     print 'Part 2.1 EC Naive Bayes classification for binarized spectrogram (25x10 features):'
+    print confusion_matrix
+
+    ### classifying each test image by first computing the average column (bullet 3)
+    compute_likelihood_priors(likelihood_matrices_columns, class_train_ct)  # again, keep in mind matrix[0] <-> no, [1] <-> yes
+    confusion_matrix.fill(0)
+
+    for yestext in os.listdir(yes_ec_dpath):
+        testing_fvals = np.matrix([[0.0] for _ in range(SAMP_HEIGHT)])
+        with open(yes_ec_dpath + yestext, 'r') as yesfile:
+            for row in range(SAMP_HEIGHT):
+                line = yesfile.readline()
+                for col in range(SAMP_WIDTH):
+                    if line[col] == ' ':    testing_fvals[row, 0] += 1
+        testing_fvals /= SAMP_WIDTH
+
+        class_MAP = calculate_classes_likelihood(likelihood_matrices_columns, testing_fvals, True)
+        if class_MAP[0] > class_MAP[1]:
+            confusion_matrix[0, 1] += 1
+        else:
+            confusion_matrix[0, 0] += 1
+    for j in range(NUM_CLASSES):
+        confusion_matrix[0, j] /= yes_tests
+
+    for notext in os.listdir(no_ec_dpath):
+        testing_fvals = np.matrix([[0.0] for _ in range(SAMP_HEIGHT)])
+        with open(no_ec_dpath + notext, 'r') as nofile:
+            for row in range(SAMP_HEIGHT):
+                line = nofile.readline()
+                for col in range(SAMP_WIDTH):
+                    if line[col] == ' ':    testing_fvals[row, 0] += 1
+        testing_fvals /= SAMP_WIDTH
+
+        class_MAP = calculate_classes_likelihood(likelihood_matrices_columns, testing_fvals, True)
+        if class_MAP[0] > class_MAP[1]:
+            confusion_matrix[1, 1] += 1
+        else:
+            confusion_matrix[1, 0] += 1
+    for j in range(NUM_CLASSES):
+        confusion_matrix[1, j] /= no_tests
+
+    # TO PRINT FOR REPORT, UNCOMMENT THESE: 
+    print 'Part 2.1 EC Naive Bayes classification for binarized spectrogram thru averaged columns (25x1 features):'
     print confusion_matrix
 
 # only run one of these at a time
