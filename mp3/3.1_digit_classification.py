@@ -205,9 +205,9 @@ def main():
 
     # TO PRINT FOR REPORT, UNCOMMENT THESE:
     np.set_printoptions(precision=3)
-    # print classification_rate
-    # print confusion_matrix
-    # print_highest_lowest_MAP_images()
+    print classification_rate
+    print confusion_matrix
+    print_highest_lowest_MAP_images()
 
     def print_odds(matrix):
         for row_idx in range(IMG_HEIGHT):
@@ -239,13 +239,13 @@ def main():
             for col_idx in range(IMG_WIDTH):
                 class_odds[row_idx, col_idx] = class_1[row_idx, col_idx]/class_2[row_idx, col_idx]
 
-        # print c1, c2
-        # print_class(class_1)
-        # print '\n'
-        # print_class(class_2)
-        # print '\n'
-        # print_odds(class_odds)
-        # print '\n'
+        print c1, c2
+        print_class(class_1)
+        print '\n'
+        print_class(class_2)
+        print '\n'
+        print_odds(class_odds)
+        print '\n'
 
 
 # 451 training images
