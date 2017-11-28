@@ -14,10 +14,10 @@ NUM_TESTING_EXEMPLARS = 1000
 
 # path variables
 digit_data_dpath = osp.dirname(__file__) + 'digitdata/'
-train_data_fpath = digit_data_dpath + 'trainingimages'
-train_labels_fpath = digit_data_dpath + 'traininglabels'
-test_data_fpath = digit_data_dpath + 'testimages'
-test_labels_fpath = digit_data_dpath + 'testlabels'
+train_data_fpath = digit_data_dpath + 'trainingimages.txt'
+train_labels_fpath = digit_data_dpath + 'traininglabels.txt'
+test_data_fpath = digit_data_dpath + 'testimages.txt'
+test_labels_fpath = digit_data_dpath + 'testlabels.txt'
 
 # global data structures
 class_train_ct = [0]*NUM_CLASSES       # for digit classes 0-9
@@ -29,12 +29,12 @@ class_test_ct = [0]*NUM_CLASSES
 classification_rate = [0.0]*NUM_CLASSES
 confusion_matrix = np.matrix([[0.0]*NUM_CLASSES for _ in range(NUM_CLASSES)])    # careful not to bamboozle yourself
 prototypical_img_loc = [ (float('inf'), 0, float('-inf'), 0) ]*NUM_CLASSES    # minMAP, minIdx, maxMAP, maxIdx
-    
+
 def compute_likelihood():
     # go through the features' counts and calculate their likelihood wrt each class with Laplace smoothing
     for class_index in range(len(class_train_ct)):
         likelihood_matrices[class_index] = (likelihood_matrices[class_index] + SMOOTH_CONSTANT) / float(class_train_ct[class_index] + FEAT_VALUES*SMOOTH_CONSTANT)
-    
+
     # compute priors
     for class_index in range(len(class_train_ct)):
         class_priors[class_index] = class_train_ct[class_index] / float(NUM_TRAINING_EXEMPLARS)
@@ -42,19 +42,19 @@ def compute_likelihood():
 def print_highest_lowest_MAP_images():
     for digit in range(len(prototypical_img_loc)):
         _, min_MAP_img_idx, _, max_MAP_img_idx = prototypical_img_loc[digit]
-        
+
         print 'Test example with lowest posterior probability for class %d:' % digit
         for line_no in range(min_MAP_img_idx*IMG_HEIGHT, (min_MAP_img_idx + 1)*IMG_HEIGHT):
             print lnc.getline(test_data_fpath, line_no).strip('\n')
-        
+
         print 'Test example with highest posterior probability for class %d:' % digit
         for line_no in range(max_MAP_img_idx*IMG_HEIGHT, (max_MAP_img_idx + 1)*IMG_HEIGHT):
-            print lnc.getline(test_data_fpath, line_no).strip('\n') 
-            
+            print lnc.getline(test_data_fpath, line_no).strip('\n')
+
 def get_confusing_idx(confusion_matrix):
     # get row, col for cells with max confusion rate
     most_confusing = []
-    
+
     for i in range(NUM_CLASSES): confusion_matrix[i, i] = 0.0
 
     # flatten matrix, get top 4 indices
@@ -66,10 +66,10 @@ def get_confusing_idx(confusion_matrix):
 
     for x, y in zip(x_idx, y_idx):
         most_confusing.append((x, y))
-        
+
     return most_confusing
 
-            
+
 # main():
 ### TRAINING
 with open(train_data_fpath, 'r') as train_images, open(train_labels_fpath, 'r') as train_labels:
@@ -96,7 +96,7 @@ with open(test_data_fpath, 'r') as test_images:
 
     for nth_img in range(NUM_TESTING_EXEMPLARS):
         class_MAP = [None]*NUM_CLASSES
-        
+
         # grab pixel data -> features from this test image
         test_img_fvals = np.matrix([[0]*IMG_HEIGHT for _ in range(IMG_WIDTH)])
         for row_idx in range(IMG_HEIGHT):
@@ -104,14 +104,14 @@ with open(test_data_fpath, 'r') as test_images:
             for col_idx in range(IMG_WIDTH):
                 if row_data[col_idx] == '+' or row_data[col_idx] == '#':
                     test_img_fvals[row_idx, col_idx] = 1
-        
+
         # figuring out the likelihood that each image belongs to a certain class
         for class_no in range(len(class_train_ct)):
             class_matrix = likelihood_matrices[class_no]
-        
+
             # to avoid underflow, we work with the log of P(class)*P(f_{1,1}|class)*...*P(f_{28,28}|class)
             posterior_prob = math.log(class_priors[class_no])
-            
+
             # calculate log P(class)+log P(f_{1,1}|class)+log P(f_{1,2}|class)+...+log P(f_{28,28}|class)
             for row_idx in range(IMG_HEIGHT):
                 for col_idx in range(IMG_WIDTH):
@@ -119,28 +119,28 @@ with open(test_data_fpath, 'r') as test_images:
                         posterior_prob += math.log(class_matrix[row_idx, col_idx])
                     else:
                         posterior_prob += math.log(1 - class_matrix[row_idx, col_idx])
-           
+
             # save the MAP prob for each class, determine test label guess based on argmax of values in array
             class_MAP[class_no] = posterior_prob
-            
+
             # update the most and least "prototypical" instances of each digit class
             class_min_prob, min_idx, class_max_prob, max_idx = prototypical_img_loc[class_no]
             if posterior_prob < class_min_prob:
                 prototypical_img_loc[class_no] = (posterior_prob, nth_img, class_max_prob, max_idx)
             if posterior_prob > class_max_prob:
                 prototypical_img_loc[class_no] = (class_min_prob, min_idx, posterior_prob, nth_img)
-            
+
         # closely matching test images have MAP ~1.0, which corresponds to (-) near 0 while MAP ~0 -> (-inf)
         class_guess[nth_img] = class_MAP.index(max(class_MAP))
-        
+
 ### EVALUATION ###
 with open(test_labels_fpath, 'r') as test_labels:
     for nth_lbl in range(NUM_TESTING_EXEMPLARS):
         actual_class = int(test_labels.readline())
-        
+
         if actual_class == class_guess[nth_lbl]:
             classification_rate[actual_class] += 1
-            
+
         class_test_ct[actual_class] += 1
         confusion_matrix[actual_class, class_guess[nth_lbl]] += 1
 
@@ -152,15 +152,16 @@ for idx in range(len(classification_rate)):
     for confusion_col in range(len(class_test_ct)):
         confusion_matrix[idx, confusion_col] /= float(class_test_ct[idx])
 
-# TO PRINT FOR REPORT, UNCOMMENT THESE: 
-#print classification_rate
-#print confusion_matrix
-#print_highest_lowest_MAP_images()
+# TO PRINT FOR REPORT, UNCOMMENT THESE:
+np.set_printoptions(precision=3)
+# print classification_rate
+# print confusion_matrix
+# print_highest_lowest_MAP_images()
 
 def print_odds(matrix):
     for row_idx in range(IMG_HEIGHT):
         for col_idx in range(IMG_WIDTH):
-            temp = math.log(matrix[row_idx, col_idx]) 
+            temp = math.log(matrix[row_idx, col_idx])
             if temp > -0.75 and temp < 1.25: print ' ',
             elif temp > 0: print '+',
             else: print '-',
@@ -187,10 +188,10 @@ for c1, c2 in most_confusing_indices:
         for col_idx in range(IMG_WIDTH):
             class_odds[row_idx, col_idx] = class_1[row_idx, col_idx]/class_2[row_idx, col_idx]
 
-    # print c1, c2
-    # print_class(class_1) 
-    # print '\n'
-    # print_class(class_2)
-    # print '\n'
-    # print_odds(class_odds)
-    # print '\n'
+    print c1, c2
+    print_class(class_1)
+    print '\n'
+    print_class(class_2)
+    print '\n'
+    print_odds(class_odds)
+    print '\n'
