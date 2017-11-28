@@ -3,7 +3,7 @@ import linecache as lnc
 import math, os, sys
 
 ### constants
-SMOOTH_CONSTANT = 0.1   # can be any value in range 0.1 and 10, but the higher the better
+SMOOTH_CONSTANT = 5   # can be any value in range 0.1 and 10, but the higher the better
 FEAT_VALUES = 2         # f in {0,1}
 SAMP_WIDTH = 10
 SAMP_HEIGHT = 25
@@ -34,7 +34,7 @@ class_priors = [0.0]*NUM_CLASSES                            # (float) P(class)
 likelihood_matrices = map(np.matrix, [ [[0.0]*SAMP_WIDTH for _ in range(SAMP_HEIGHT)] ]*NUM_CLASSES)    # P(F_{ij} = f | class)
 class_guess = [None]*(NUM_TESTING_YES + NUM_TESTING_NO)
 confusion_matrix = np.matrix([[0.0]*NUM_CLASSES for _ in range(NUM_CLASSES)])    # careful not to bamboozle yourself
-    
+
 def compute_likelihood_priors(model_matrices, class_ct):
     # go through the features' counts and calculate their likelihood wrt each class with Laplace smoothing
     for class_index in range(NUM_CLASSES):
@@ -49,10 +49,10 @@ def calculate_classes_likelihood(model_matrices, test_matrix, is_ec_columns):
     # figuring out the likelihood that each sample belongs to 'yes' or 'no' classes
     for which_class in range(NUM_CLASSES):
         class_matrix = model_matrices[which_class]
-    
+
         # to avoid underflow, we work with the log of P(class)*P(f_{1,1}|class)*...*P(f_{25,10}|class)
         posterior_prob = math.log(class_priors[which_class])
-        
+
         if not is_ec_columns:
             # calculate log P(class)+log P(f_{1,1}|class)+log P(f_{1,2}|class)+...+log P(f_{25,10}|class)
             for row_idx in range(SAMP_HEIGHT):
@@ -69,7 +69,7 @@ def calculate_classes_likelihood(model_matrices, test_matrix, is_ec_columns):
         # save the MAP prob for each class, determine test guess based on argmax of values
         class_MAP[which_class] = posterior_prob
     return class_MAP
-            
+
 def main():
     ### TRAINING
     with open(train_yes_fpath, 'r') as train_yes, open(train_no_fpath, 'r') as train_no:
@@ -84,10 +84,10 @@ def main():
             #skip three empty lines
             for empty_line in range(3):
                 train_yes.readline()
-            
+
             # accumulate feat val for each frequency-time of this class' global data storage structure
             likelihood_matrices[0] += train_aud_fvals
-            
+
         for n_ex in range(class_train_ct[1]):
             train_aud_fvals = np.matrix([[0]*SAMP_WIDTH for _ in range(SAMP_HEIGHT)])
             for row_idx in range(SAMP_HEIGHT):
@@ -99,7 +99,7 @@ def main():
             #skip three empty lines
             for empty_line in range(3):
                 train_no.readline()
-            
+
             # accumulate feat val for each frequency-time of this class' global data storage structure
             likelihood_matrices[1] += train_aud_fvals
 
@@ -117,7 +117,7 @@ def main():
                         test_aud_fvals[row_idx, col_idx] = 1
             for empty_line in range(3):
                 test_yes.readline()
-            
+
             class_MAP = calculate_classes_likelihood(likelihood_matrices, test_aud_fvals, False)
 
             # closely matching test audio have MAP ~1.0 (due to log)
@@ -133,12 +133,12 @@ def main():
                         test_aud_fvals[row_idx, col_idx] = 1
             for empty_line in range(3):
                 test_no.readline()
-            
+
             class_MAP = calculate_classes_likelihood(likelihood_matrices, test_aud_fvals, False)
-                
+
             # closely matching test audio have MAP ~1.0 (due to log)
             class_guess[nth_n_aud + NUM_TESTING_YES] = 0 if class_MAP[0] > class_MAP[1] else 1
-            
+
     ### EVALUATION ###
     # confusion_matrix:
     #
@@ -165,7 +165,7 @@ def main():
             # assumption here is that the number of yes & no test samples are the same
             confusion_matrix[row_idx, col_idx] /= float(NUM_TESTING_YES)
 
-    # TO PRINT FOR REPORT, UNCOMMENT THESE: 
+    # TO PRINT FOR REPORT, UNCOMMENT THESE:
     print 'Part 2.1 Naive Bayes for binarized spectrogram (25x10 features):'
     print confusion_matrix
 
@@ -206,7 +206,7 @@ def extra_credit():
             i += 1
         if current_range:
             tuples_of_ranges.append( (sum(current_range), UNSEGMENTED_LINE_LEN-len(current_range), UNSEGMENTED_LINE_LEN) )
-        
+
         found_sample_ranges = []
         disjoint_ranges = set()
         tuples_of_ranges.sort()
@@ -215,11 +215,11 @@ def extra_credit():
             if start_col not in disjoint_ranges and end_col-1 not in disjoint_ranges:
                 found_sample_ranges.append((start_col, end_col))
                 disjoint_ranges.update(range(start_col, end_col))
-                
+
                 if len(found_sample_ranges) == len(training_segments):
                     break
         assert len(found_sample_ranges) == len(training_segments), 'Algorithm did not find as many training samples as supposed to in file!'
-        
+
         found_sample_ranges.sort()
         for sample_rangei in range(len(found_sample_ranges)):
             lbi, rbe = found_sample_ranges[sample_rangei]
@@ -281,7 +281,7 @@ def extra_credit():
     for j in range(NUM_CLASSES):
         confusion_matrix[1, j] /= float(no_tests)
 
-    # TO PRINT FOR REPORT, UNCOMMENT THESE: 
+    # TO PRINT FOR REPORT, UNCOMMENT THESE:
     print 'Part 2.1 EC Naive Bayes classification for binarized spectrogram (25x10 features):'
     print confusion_matrix
 
@@ -323,10 +323,10 @@ def extra_credit():
     for j in range(NUM_CLASSES):
         confusion_matrix[1, j] /= no_tests
 
-    # TO PRINT FOR REPORT, UNCOMMENT THESE: 
+    # TO PRINT FOR REPORT, UNCOMMENT THESE:
     print 'Part 2.1 EC Naive Bayes classification for binarized spectrogram thru averaged columns (25x1 features):'
     print confusion_matrix
 
 # only run one of these at a time
-#main()
-extra_credit()
+main()
+# extra_credit()
