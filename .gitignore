@@ -1,0 +1,7 @@
+### Universal for all MP folders ###
+####################################
+.DS_Store
+
+### Course grouping specifics ###
+#################################
+*-AI/*.pyc
