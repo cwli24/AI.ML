@@ -1,7 +1,8 @@
 # Artificial Intelligence & Machine Learning
 ###### Artificial Intelligence (Intro) :
 ECE 448/CS 440 MPs '-AI'  
-Partner: Harsh Modhera (hmodhe2@illinois.edu)  
+Partner: _Harsh Modhera (hmodhe2@illinois.edu)_  
+Partner: _Mihir Sherlekar (sherlkr2@illinois.edu)_  
 Fall 2017 UofI  
 ###### Machine Learning (Intro) :
 ECE 449/CS 446 MPs '-ML'  
